@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Clock, MapPin, TrendingUp, Shield, Zap, Navigation,
-  CheckCircle, AlertTriangle, Info
+  CheckCircle, AlertTriangle, Info, Eye
 } from 'lucide-react';
 import { useApp } from '../context';
 import { formatDistance, formatDuration, getRiskBgColor } from '../services';
@@ -46,6 +46,7 @@ function RiskPill({ label, score }: { label: string; score: number }) {
 }
 
 export function RouteCard({ route, isSelected, onSelect }: RouteCardProps) {
+  const { dispatch } = useApp();
   const typeConfig: Record<RouteType, { label: string; color: string; icon: React.ReactNode; badge?: string }> = {
     shortest: { label: 'Shortest', color: 'emerald', icon: <MapPin size={13} /> },
     fastest: { label: 'Fastest', color: 'blue', icon: <Zap size={13} /> },
@@ -144,6 +145,28 @@ export function RouteCard({ route, isSelected, onSelect }: RouteCardProps) {
           {route.type === 'recommended' && (
             <RiskPill label="Weather" score={route.riskBreakdown.weather} />
           )}
+        </div>
+      )}
+
+      {/* 360 Street View Quick Action */}
+      {isSelected && route.coordinates && route.coordinates.length > 0 && (
+        <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
+          <span className="text-[10px] text-gray-400">Street View 360° Panorama</span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              const midIdx = Math.floor(route.coordinates.length / 2);
+              const [lat, lng] = route.coordinates[midIdx] || route.coordinates[0];
+              dispatch({
+                type: 'SET_STREET_VIEW_LOCATION',
+                payload: { lat, lng, title: `${route.label} — Street View` }
+              });
+            }}
+            className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 cursor-pointer bg-brand-500/10 hover:bg-brand-500/20 px-2 py-1 rounded-md border border-brand-500/30 transition-colors"
+          >
+            <Eye size={12} />
+            Inspect 360°
+          </span>
         </div>
       )}
 

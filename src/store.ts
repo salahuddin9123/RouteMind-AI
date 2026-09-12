@@ -51,6 +51,8 @@ type Action =
   | { type: 'SET_WHATIF_SCENARIO'; payload: WhatIfScenario | null }
   | { type: 'SET_WHATIF_RESULT'; payload: WhatIfResult | null }
   | { type: 'SET_DEMO_MODE'; payload: boolean }
+  | { type: 'SET_STREET_VIEW_LOCATION'; payload: { lat: number; lng: number; heading?: number; pitch?: number; title?: string } | null }
+  | { type: 'SET_MAP_ENGINE'; payload: 'google' | 'leaflet' }
   | { type: 'LOAD_PERSISTED_DATA'; payload: Partial<AppState> };
 
 // ==================== Default State ====================
@@ -77,13 +79,16 @@ const defaultPreferences: UserPreferences = {
   showWeatherMarkers: true,
 };
 
+const googleKeyFromEnv = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+
 const defaultApiConfig: ApiConfig = {
-  mapProvider: 'openstreetmap',
+  mapProvider: googleKeyFromEnv ? 'google' : 'openstreetmap',
   geocodingProvider: 'nominatim',
-  routingProvider: 'osrm',
+  routingProvider: googleKeyFromEnv ? 'google_directions' : 'osrm',
   weatherApiKey: '',
   floodApiEndpoint: '',
   closureApiEndpoint: '',
+  googleMapsApiKey: googleKeyFromEnv,
 };
 
 export const defaultState: AppState = {
@@ -121,6 +126,9 @@ export const defaultState: AppState = {
   showTrafficLayer: true,
   showDamageLayer: true,
   showIncidentsLayer: true,
+
+  streetViewLocation: null,
+  mapEngine: googleKeyFromEnv ? 'google' : 'leaflet',
 
   preferences: defaultPreferences,
   apiConfig: defaultApiConfig,
@@ -255,6 +263,10 @@ export function appReducer(state: AppState, action: Action): AppState {
       return { ...state, whatIfScenario: action.payload };
     case 'SET_WHATIF_RESULT':
       return { ...state, whatIfResult: action.payload };
+    case 'SET_STREET_VIEW_LOCATION':
+      return { ...state, streetViewLocation: action.payload };
+    case 'SET_MAP_ENGINE':
+      return { ...state, mapEngine: action.payload };
     case 'LOAD_PERSISTED_DATA':
       return { ...state, ...action.payload };
     default:

@@ -31,6 +31,7 @@ app.get('/api/health', (req, res) => {
       geocoding: 'ok',
       routing: 'ok',
       weather: 'ok',
+      googleMaps: (process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY) ? 'ok' : 'missing_key',
       ai: process.env.AI_API_KEY ? 'ok' : 'missing_key',
       traffic: process.env.TOMTOM_API_KEY ? 'ok' : 'missing_key',
       flood: process.env.TOMORROW_IO_API_KEY ? 'ok' : 'missing_key',
@@ -151,6 +152,28 @@ app.get('/api/route', async (req, res) => {
   } catch (error) {
     console.error('Routing error:', error);
     res.status(500).json({ error: 'Failed to fetch routing data' });
+  }
+});
+
+// Google Maps Traffic-Aware Directions Proxy
+app.get('/api/google/directions', async (req, res) => {
+  try {
+    const { origin, destination, mode = 'driving' } = req.query;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({ error: 'GOOGLE_MAPS_API_KEY is not configured in server environment' });
+    }
+    if (!origin || !destination) {
+      return res.status(400).json({ error: 'Origin and destination are required' });
+    }
+
+    const gUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&mode=${mode}&departure_time=now&traffic_model=best_guess&alternatives=true&key=${apiKey}`;
+    const response = await fetch(gUrl);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Google Directions proxy error:', error);
+    res.status(500).json({ error: 'Google Directions proxy failed' });
   }
 });
 

@@ -469,6 +469,123 @@ async function fetchMultiModalOSRM(
   return { routes: fbData.routes, backendUsed: 'OSRM Standard Fallback' };
 }
 
+// ==================== Google Maps & Live Traffic Routing ====================
+
+let googleMapsPromise: Promise<boolean> | null = null;
+let googleMapsAuthFailed = false;
+
+export function isGoogleMapsAuthFailed(): boolean {
+  return googleMapsAuthFailed;
+}
+
+export function loadGoogleMapsScript(apiKey: string): Promise<boolean> {
+  if (!apiKey || apiKey.trim() === '' || apiKey.includes('YOUR_KEY') || apiKey.includes('DEMO_KEY')) {
+    return Promise.resolve(false);
+  }
+
+  if (typeof window !== 'undefined' && (window as any).google?.maps) {
+    return Promise.resolve(true);
+  }
+
+  if (googleMapsAuthFailed) {
+    return Promise.resolve(false);
+  }
+
+  if (googleMapsPromise) {
+    return googleMapsPromise;
+  }
+
+  googleMapsPromise = new Promise<boolean>((resolve) => {
+    (window as any).gm_authFailure = () => {
+      console.warn('[RouteMind AI] Google Maps API Authentication failed. Reverting gracefully to Leaflet.');
+      googleMapsAuthFailed = true;
+      resolve(false);
+    };
+
+    const existingScript = document.getElementById('google-maps-js-script');
+    if (existingScript) existingScript.remove();
+
+    const script = document.createElement('script');
+    script.id = 'google-maps-js-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places,geometry`;
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => {
+      setTimeout(() => {
+        if (googleMapsAuthFailed) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      }, 300);
+    };
+
+    script.onerror = () => {
+      console.warn('[RouteMind AI] Failed to load Google Maps script from network.');
+      resolve(false);
+    };
+
+    document.head.appendChild(script);
+  });
+
+  return googleMapsPromise;
+}
+
+export async function fetchGoogleTrafficRoute(
+  origin: GeoLocation,
+  destination: GeoLocation,
+  travelMode: string
+): Promise<{ routes: any[]; backendUsed: string } | null> {
+  if (typeof window === 'undefined' || !(window as any).google?.maps) {
+    return null;
+  }
+
+  const gmaps = (window as any).google.maps;
+  if (!gmaps.DirectionsService) return null;
+
+  const directionsService = new gmaps.DirectionsService();
+
+  let mode = gmaps.TravelMode.DRIVING;
+  if (travelMode === 'walking') mode = gmaps.TravelMode.WALKING;
+  else if (travelMode === 'cycling') mode = gmaps.TravelMode.BICYCLING;
+  else if (travelMode === 'transit') mode = gmaps.TravelMode.TRANSIT;
+
+  try {
+    const request: any = {
+      origin: new gmaps.LatLng(origin.lat, origin.lng),
+      destination: new gmaps.LatLng(destination.lat, destination.lng),
+      travelMode: mode,
+      provideRouteAlternatives: true,
+    };
+
+    if (mode === gmaps.TravelMode.DRIVING) {
+      request.drivingOptions = {
+        departureTime: new Date(),
+        trafficModel: gmaps.TrafficModel.BEST_GUESS,
+      };
+    }
+
+    const result = await new Promise<any>((resolve, reject) => {
+      directionsService.route(request, (res: any, status: any) => {
+        if (status === gmaps.DirectionsStatus.OK && res.routes?.length > 0) {
+          resolve(res);
+        } else {
+          reject(new Error(`Directions status: ${status}`));
+        }
+      });
+    });
+
+    return {
+      routes: result.routes,
+      backendUsed: 'Google Maps Directions API (Live Traffic Model)'
+    };
+  } catch (err: any) {
+    console.warn('[RouteMind AI] Google Directions Service error:', err.message);
+    return null;
+  }
+}
+
 // ==================== Route Score ====================
 
 function computeAIScore(
@@ -513,18 +630,88 @@ export async function calculateRoutes(
   const startTime = Date.now();
   console.info(`[RouteMind AI] Calculating routes for mode="${travelMode}", preference="${preference}"`);
 
-  const { routes: rawRoutes, backendUsed } = await fetchMultiModalOSRM(origin, destination, travelMode);
+  let rawRoutes: any[] = [];
+  let backendUsed = '';
 
+  // 1. Try Google Directions with live traffic model first
+  const googleRes = await fetchGoogleTrafficRoute(origin, destination, travelMode);
+  if (googleRes && googleRes.routes?.length > 0) {
+    rawRoutes = googleRes.routes;
+    backendUsed = googleRes.backendUsed;
+  } else {
+    // 2. Seamless fallback to Multi-Modal OSM routing
+    const osrmRes = await fetchMultiModalOSRM(origin, destination, travelMode);
+    rawRoutes = osrmRes.routes;
+    backendUsed = osrmRes.backendUsed;
+  }
+
+  const isGoogle = backendUsed.includes('Google');
   const isTransit = travelMode === 'transit';
   const isWalking = travelMode === 'walking';
   const isCycling = travelMode === 'cycling';
 
-  const rawBase = rawRoutes[0];
-  const midPoint = rawBase.geometry.coordinates[Math.floor(rawBase.geometry.coordinates.length / 2)];
-  const weather = await fetchLiveWeather(midPoint[1], midPoint[0]);
+  const midLat = (origin.lat + destination.lat) / 2;
+  const midLng = (origin.lng + destination.lng) / 2;
+  const weather = await fetchLiveWeather(midLat, midLng);
   const weatherRiskScore = weather.risk === 'critical' ? 75 : weather.risk === 'high' ? 45 : weather.risk === 'moderate' ? 20 : 0;
 
   const processedRoutes: Route[] = rawRoutes.map((route, index) => {
+    if (isGoogle) {
+      const leg = route.legs?.[0];
+      const overviewCoords: [number, number][] = (route.overview_path || []).map(
+        (p: any) => [p.lat(), p.lng()] as [number, number]
+      );
+
+      const distance = leg?.distance?.value || 0;
+      const durationWithTraffic = leg?.duration_in_traffic?.value || leg?.duration?.value || 0;
+      const standardDuration = leg?.duration?.value || durationWithTraffic;
+
+      const segments: RouteSegment[] = (leg?.steps || []).map((step: any, stepIdx: number) => {
+        const stepCoords: [number, number][] = (step.path || []).map(
+          (p: any) => [p.lat(), p.lng()] as [number, number]
+        );
+
+        let trafficLevel: 'low' | 'moderate' | 'high' | 'critical' = 'low';
+        if (durationWithTraffic > standardDuration * 1.35) trafficLevel = 'critical';
+        else if (durationWithTraffic > standardDuration * 1.18) trafficLevel = 'high';
+        else if (durationWithTraffic > standardDuration * 1.05) trafficLevel = 'moderate';
+
+        return {
+          name: step.instructions ? step.instructions.replace(/<[^>]*>?/gm, '') : `Step ${stepIdx + 1}`,
+          distance: step.distance?.value || 0,
+          duration: step.duration?.value || 0,
+          riskLevel: 'low',
+          floodRisk: 'low',
+          hasHazard: false,
+          isClosed: false,
+          trafficLevel,
+          coordinates: stepCoords
+        };
+      });
+
+      const trafficDelaySec = Math.max(0, durationWithTraffic - standardDuration);
+      const trafficRisk = Math.min(100, Math.round((trafficDelaySec / 60) * 8));
+      const riskOverall = Math.round(weatherRiskScore * 0.2 + trafficRisk * 0.3);
+      const safetyScore = Math.max(25, 100 - riskOverall - index * 5);
+
+      return {
+        id: `route-${index}`,
+        type: 'fastest',
+        label: route.summary ? `Via ${route.summary}` : `Route ${index + 1}`,
+        distance,
+        duration: durationWithTraffic,
+        turns: leg?.steps?.length || 4,
+        coordinates: overviewCoords,
+        segments,
+        riskBreakdown: { flood: 0, closure: 0, weather: weatherRiskScore, traffic: trafficRisk, hazard: 0, overall: riskOverall },
+        safetyScore,
+        isDemo: false,
+        color: '#3b82f6',
+        aiScore: 0
+      };
+    }
+
+    // Standard OSRM format processing
     const coordPairs: [number, number][] = route.geometry.coordinates.map(
       (c: [number, number]) => [c[1], c[0]] as [number, number]
     );

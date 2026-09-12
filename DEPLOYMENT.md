@@ -27,6 +27,8 @@ This guide explains how **RouteMind AI** is configured for automated continuous 
 3. Select your repository: `salahuddin9123/RouteMind-AI`.
 4. Framework Preset: Leave as **Vite** (Vercel auto-detects `package.json`).
 5. **Environment Variables** (Optional):
+   - `VITE_GOOGLE_MAPS_API_KEY`: *(Recommended)* Your Google Cloud API Key (Enables Google Live Traffic Layer, 360° Street View, and Traffic-Aware Directions).
+   - `GOOGLE_MAPS_API_KEY`: Server-side Google Maps API key for backend directions proxy.
    - `AI_API_KEY`: *(Optional)* Your Google Gemini API key. (If omitted, RouteMind AI uses its intelligent grounded offline engine).
    - `TOMTOM_API_KEY`: *(Optional)* Your TomTom traffic API key.
    - `TOMORROW_IO_API_KEY`: *(Optional)* Your Tomorrow.io flood API key.

@@ -314,6 +314,7 @@ export interface ApiConfig {
   weatherApiKey: string;
   floodApiEndpoint: string;
   closureApiEndpoint: string;
+  googleMapsApiKey: string;
 }
 
 export interface UserPreferences {
@@ -374,6 +375,10 @@ export interface AppState {
   showTrafficLayer: boolean;
   showDamageLayer: boolean;
   showIncidentsLayer: boolean;
+  
+  // Street View & Engine
+  streetViewLocation: { lat: number; lng: number; heading?: number; pitch?: number; title?: string } | null;
+  mapEngine: 'google' | 'leaflet';
   
   // Preferences
   preferences: UserPreferences;

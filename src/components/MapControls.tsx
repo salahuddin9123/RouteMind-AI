@@ -83,6 +83,23 @@ export function MapControls() {
           color="#6366f1"
         />
       </div>
+
+      {/* Quick Street View Tool */}
+      <button
+        onClick={() => {
+          const loc = state.destinationPlace?.location || state.originPlace?.location || { lat: 22.7335, lng: 88.5529 };
+          const title = state.destinationPlace?.name || state.originPlace?.name || 'Street View 360° Panorama';
+          dispatch({
+            type: 'SET_STREET_VIEW_LOCATION',
+            payload: { lat: loc.lat, lng: loc.lng, title }
+          });
+        }}
+        className="glass-card px-3 py-2 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-brand-300 hover:text-white bg-surface-800/90 hover:bg-brand-600/40 border border-brand-500/30 rounded-xl transition-all shadow-xl"
+        title="Open 360° Street View at current location"
+      >
+        <Eye size={13} />
+        Street View 360°
+      </button>
     </div>
   );
 }
