@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: routemind-ai
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build && npm --prefix server install
+    startCommand: node server/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AI_API_KEY
+        value: DEMO_KEY
+      - key: TOMTOM_API_KEY
+        sync: false
+      - key: TOMORROW_IO_API_KEY
+        sync: false
