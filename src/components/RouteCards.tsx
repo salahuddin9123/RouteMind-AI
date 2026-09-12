@@ -159,6 +159,7 @@ export function RouteCard({ route, isSelected, onSelect }: RouteCardProps) {
 
 export function RouteCards() {
   const { state, dispatch } = useApp();
+  const [showTelemetry, setShowTelemetry] = React.useState(false);
   const rc = state.routeComparison;
 
   if (!rc) return null;
@@ -174,11 +175,50 @@ export function RouteCards() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="section-header mb-0">Route Options</h3>
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] text-gray-500">Calculated:</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowTelemetry(!showTelemetry)}
+            className="text-[10px] px-2 py-0.5 rounded bg-brand-500/10 border border-brand-500/30 text-brand-300 hover:bg-brand-500/20 transition-colors"
+            title="Inspect routing API parameters and latency"
+          >
+            {showTelemetry ? 'Hide Telemetry' : 'API Telemetry'}
+          </button>
           <span className="text-[10px] text-gray-400">{new Date(rc.calculatedAt).toLocaleTimeString()}</span>
         </div>
       </div>
+
+      {/* Telemetry & API Inspector Panel */}
+      {showTelemetry && rc.telemetry && (
+        <div className="glass-card p-3 border-brand-500/30 bg-surface-900/90 text-xs space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between pb-1.5 border-b border-white/5">
+            <span className="font-bold text-brand-400 flex items-center gap-1.5">
+              <Zap size={12} /> Routing Engine Inspector
+            </span>
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Verified Active</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div>
+              <span className="text-gray-500 block">Travel Mode:</span>
+              <span className="text-white font-medium capitalize">{rc.telemetry.travelMode}</span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Preference:</span>
+              <span className="text-white font-medium capitalize">{rc.telemetry.preference}</span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Backend Router:</span>
+              <span className="text-brand-300 font-medium truncate block">{rc.telemetry.backendEndpoint}</span>
+            </div>
+            <div>
+              <span className="text-gray-500 block">API Latency:</span>
+              <span className="text-white font-medium">{rc.telemetry.apiDurationMs} ms</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-500 pt-1 border-t border-white/5">
+            Console telemetry logged to browser DevTools. Each combination calculates distinct physical paths and timing.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-2">
         {routes.map((route) => (

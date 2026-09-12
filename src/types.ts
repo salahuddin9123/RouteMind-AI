@@ -76,6 +76,15 @@ export interface Route {
   aiScore: number;        // Computed ranking score
 }
 
+export interface RouteTelemetry {
+  travelMode: TravelMode;
+  preference: RoutePreference;
+  backendEndpoint: string;
+  apiDurationMs?: number;
+  alternativesFound: number;
+  calculatedAt: string;
+}
+
 export interface RouteComparison {
   shortest: Route | null;
   fastest: Route | null;
@@ -84,6 +93,7 @@ export interface RouteComparison {
   all: Route[];
   explanation: string;
   calculatedAt: string;
+  telemetry?: RouteTelemetry;
 }
 
 // ==================== Risk Weights ====================
@@ -247,6 +257,9 @@ export interface CampusData {
   trafficStatus: string;
   floodStatus: string;
   lastUpdated: string;
+  isEstimated?: boolean;
+  telemetrySource?: string;
+  liveSensorsActive?: number;
 }
 
 // ==================== Analytics ====================

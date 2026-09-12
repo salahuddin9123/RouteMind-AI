@@ -4,9 +4,41 @@ import { useApp } from '../context';
 
 export function MapControls() {
   const { state, dispatch } = useApp();
+  const currentStyle = state.preferences.mapStyle || 'dark';
 
   return (
     <div className="absolute bottom-6 right-4 flex flex-col gap-2 z-20">
+      {/* Basemap Switcher */}
+      <div className="glass-card p-2.5 shadow-xl space-y-1.5">
+        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Map Style</span>
+        <div className="flex gap-1">
+          <button
+            onClick={() => dispatch({ type: 'SET_PREFERENCES', payload: { mapStyle: 'dark' } })}
+            className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${
+              currentStyle === 'dark' ? 'bg-brand-600 text-white font-bold' : 'bg-surface-700 text-gray-400 hover:text-white'
+            }`}
+          >
+            Dark
+          </button>
+          <button
+            onClick={() => dispatch({ type: 'SET_PREFERENCES', payload: { mapStyle: 'streets' } })}
+            className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${
+              currentStyle === 'streets' ? 'bg-brand-600 text-white font-bold' : 'bg-surface-700 text-gray-400 hover:text-white'
+            }`}
+          >
+            Streets
+          </button>
+          <button
+            onClick={() => dispatch({ type: 'SET_PREFERENCES', payload: { mapStyle: 'satellite' } })}
+            className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${
+              currentStyle === 'satellite' ? 'bg-brand-600 text-white font-bold' : 'bg-surface-700 text-gray-400 hover:text-white'
+            }`}
+          >
+            Hybrid
+          </button>
+        </div>
+      </div>
+
       {/* Layer controls */}
       <div className="glass-card p-3 space-y-2 shadow-xl">
         <div className="flex items-center gap-2 mb-2">
