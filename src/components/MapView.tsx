@@ -390,25 +390,30 @@ export function MapView() {
     const style = state.preferences.mapStyle || 'dark';
 
     if (style === 'streets') {
+      // 100% Free OpenStreetMap Standard Tiles (No API key, No watermarks)
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(tileGroupRef.current);
     } else if (style === 'satellite') {
+      // 100% Free Esri World Imagery (No API key, No watermarks)
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS',
         maxZoom: 19,
       }).addTo(tileGroupRef.current);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CartoDB',
+      // 100% Free Esri Reference Boundaries & Transportation Labels (No CARTO, No API key, No watermarks)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Labels &copy; Esri',
         maxZoom: 19,
       }).addTo(tileGroupRef.current);
     } else {
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      // 100% Free Dark Theme Navigation Tiles (No CARTO, No API key, No watermarks)
+      // OpenStreetMap with high-contrast night styling class
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
-        subdomains: 'abcd',
+        className: 'map-tiles-dark',
       }).addTo(tileGroupRef.current);
     }
   }, [useGoogleMaps, state.preferences.mapStyle]);

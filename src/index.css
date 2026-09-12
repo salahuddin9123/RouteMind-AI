@@ -218,3 +218,14 @@
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 8px !important;
 }
+
+/* High-Contrast Dark Map Tiles (Pure CSS filter over 100% Free OpenStreetMap - No API Key, No Watermark) */
+.map-tiles-dark,
+.leaflet-tile.map-tiles-dark,
+.leaflet-tile-pane .map-tiles-dark {
+  filter: brightness(0.65) invert(1) contrast(2.2) hue-rotate(200deg) saturate(0.35) brightness(0.75) !important;
+}
+
+.leaflet-container {
+  background: #0f172a !important;
+}

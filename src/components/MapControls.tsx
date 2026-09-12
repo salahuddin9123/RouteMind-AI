@@ -34,7 +34,7 @@ export function MapControls() {
               currentStyle === 'satellite' ? 'bg-brand-600 text-white font-bold' : 'bg-surface-700 text-gray-400 hover:text-white'
             }`}
           >
-            Hybrid
+            Satellite
           </button>
         </div>
       </div>
