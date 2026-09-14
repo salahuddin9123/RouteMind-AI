@@ -21,31 +21,134 @@ export async function checkApiHealth() {
 // ==================== Geocoding ====================
 
 export async function geocodePlace(query: string): Promise<Place[]> {
+  const q = (query || '').trim();
+  if (!q) return [];
+
+  // 1. Nominatim Direct (Official OpenStreetMap Geocoder)
   try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`);
-    if (!response.ok) return [];
-    const data = await response.json();
-    return data.map((item: any): Place => ({
-      name: item.display_name.split(',')[0],
-      displayName: item.display_name,
-      location: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) },
-      type: item.type,
-      country: item.address?.country,
-    }));
-  } catch {
-    return [];
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5`;
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((item: any): Place => ({
+          name: item.name || item.display_name.split(',')[0].trim(),
+          displayName: item.display_name,
+          location: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) },
+          type: item.type || item.class || 'place',
+          country: item.address?.country,
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('[RouteMind AI] Direct Nominatim fetch error, trying fallback:', err);
   }
+
+  // 2. Backend Proxy (if available)
+  try {
+    const proxyUrl = `${API_BASE}/geocode?q=${encodeURIComponent(q)}`;
+    const response = await fetch(proxyUrl);
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((item: any): Place => ({
+          name: item.name || item.display_name.split(',')[0].trim(),
+          displayName: item.display_name,
+          location: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) },
+          type: item.type || item.class || 'place',
+          country: item.address?.country,
+        }));
+      }
+    }
+  } catch {}
+
+  // 3. Photon (Komoot OSM Geocoder Fallback - 100% Free, Zero Key, Full CORS)
+  try {
+    const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5`;
+    const response = await fetch(photonUrl, { headers: { 'Accept': 'application/json' } });
+    if (response.ok) {
+      const data = await response.json();
+      if (data?.features?.length > 0) {
+        return data.features.map((f: any): Place => {
+          const props = f.properties || {};
+          const [lon, lat] = f.geometry?.coordinates || [0, 0];
+          const name = props.name || props.city || props.street || q;
+          const displayParts = [props.name, props.city, props.state, props.country].filter(Boolean);
+          return {
+            name,
+            displayName: displayParts.join(', ') || name,
+            location: { lat, lng: lon },
+            type: props.type || 'place',
+            country: props.country || '',
+          };
+        });
+      }
+    }
+  } catch {}
+
+  return [];
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<Place> {
-  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
-  if (!response.ok) throw new Error('Reverse geocoding failed');
-  const data = await response.json();
+  // 1. Nominatim Direct
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        name: data.name || data.display_name.split(',')[0].trim(),
+        displayName: data.display_name,
+        location: { lat, lng },
+        country: data.address?.country,
+      };
+    }
+  } catch {}
+
+  // 2. Backend Proxy
+  try {
+    const response = await fetch(`${API_BASE}/reverse-geocode?lat=${lat}&lon=${lng}`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        name: data.name || data.display_name.split(',')[0].trim(),
+        displayName: data.display_name,
+        location: { lat, lng },
+        country: data.address?.country,
+      };
+    }
+  } catch {}
+
+  // 3. Photon Reverse Fallback
+  try {
+    const response = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`, {
+      headers: { 'Accept': 'application/json' }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const props = data?.features?.[0]?.properties;
+      if (props) {
+        const name = props.name || props.city || props.street || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        const displayParts = [props.name, props.city, props.state, props.country].filter(Boolean);
+        return {
+          name,
+          displayName: displayParts.join(', ') || name,
+          location: { lat, lng },
+          country: props.country || '',
+        };
+      }
+    }
+  } catch {}
+
   return {
-    name: data.name || data.display_name.split(',')[0],
-    displayName: data.display_name,
+    name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    displayName: `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
     location: { lat, lng },
-    country: data.address?.country,
   };
 }
 

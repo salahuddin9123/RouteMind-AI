@@ -4,7 +4,7 @@ import {
   Bike, Bus, ChevronDown, Search, AlertTriangle, Loader2
 } from 'lucide-react';
 import { useApp } from '../context';
-import { geocodePlace } from '../services';
+import { geocodePlace, reverseGeocode } from '../services';
 import type { Place, TravelMode, RoutePreference } from '../types';
 
 interface LocationInputProps {
@@ -34,30 +34,47 @@ function LocationInput({ id, placeholder, value, onChange, onSelect, icon, label
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleChange = useCallback((val: string) => {
+  const handleChange = (val: string) => {
     onChange(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (val.length < 1) { setResults([]); return; }
+    if (val.trim().length === 0) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
 
     debounceRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const places = await geocodePlace(val);
+        const places = await geocodePlace(val.trim());
         setResults(places.slice(0, 5));
-        setShowDropdown(true);
+        if (places.length > 0) {
+          setShowDropdown(true);
+        }
       } catch {
         setResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 400);
-  }, [onChange]);
+    }, 350);
+  };
 
   const handleSelect = (place: Place) => {
     onChange(place.name);
     onSelect(place);
     setShowDropdown(false);
     setResults([]);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (results.length > 0) {
+        handleSelect(results[0]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
   };
 
   return (
@@ -73,6 +90,8 @@ function LocationInput({ id, placeholder, value, onChange, onSelect, icon, label
           value={value}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => results.length > 0 && setShowDropdown(true)}
+          onClick={() => results.length > 0 && setShowDropdown(true)}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="input-field pl-10 pr-8"
           autoComplete="off"
@@ -87,17 +106,21 @@ function LocationInput({ id, placeholder, value, onChange, onSelect, icon, label
       </div>
 
       {showDropdown && results.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1.5 glass-card shadow-2xl overflow-hidden animate-fade-in max-h-72 overflow-y-auto scroll-area">
+        <div className="absolute z-[100] top-full left-0 right-0 mt-1.5 shadow-2xl overflow-hidden animate-fade-in max-h-72 overflow-y-auto scroll-area border border-white/15 rounded-xl bg-[#151926] shadow-black/80">
           {results.map((place, i) => (
             <button
               key={i}
-              onClick={() => handleSelect(place)}
-              className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-start gap-3 border-b border-white/5 last:border-0 transition-colors"
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(place);
+              }}
+              className="w-full text-left px-4 py-3 hover:bg-brand-600/20 flex items-start gap-3 border-b border-white/5 last:border-0 transition-colors cursor-pointer group"
             >
-              <MapPin size={13} className="text-brand-400 mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm text-white font-medium truncate">{place.name}</p>
-                <p className="text-[11px] text-gray-500 truncate">{place.displayName}</p>
+              <MapPin size={14} className="text-brand-400 mt-0.5 shrink-0 group-hover:scale-110 transition-transform" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-white font-medium truncate group-hover:text-brand-300 transition-colors">{place.name}</p>
+                <p className="text-[11px] text-gray-400 truncate">{place.displayName}</p>
               </div>
             </button>
           ))}
@@ -138,7 +161,6 @@ export function SearchPanel({ onPlanRoute, isLoading }: SearchPanelProps) {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const { reverseGeocode } = await import('../services');
           const place = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
           dispatch({ type: 'SET_ORIGIN_INPUT', payload: place.name });
           dispatch({ type: 'SET_ORIGIN_PLACE', payload: place });
@@ -160,7 +182,41 @@ export function SearchPanel({ onPlanRoute, isLoading }: SearchPanelProps) {
     );
   };
 
-  const canPlan = state.originPlace && state.destinationPlace && !isLoading;
+  const canPlan = (Boolean(state.originPlace) || Boolean(state.originInput.trim())) &&
+                  (Boolean(state.destinationPlace) || Boolean(state.destinationInput.trim())) &&
+                  !isLoading;
+
+  const handlePlanClick = async () => {
+    let origin = state.originPlace;
+    let destination = state.destinationPlace;
+
+    if (!origin && state.originInput.trim()) {
+      dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Locating origin...' } });
+      const places = await geocodePlace(state.originInput.trim());
+      if (places.length > 0) {
+        origin = places[0];
+        dispatch({ type: 'SET_ORIGIN_PLACE', payload: origin });
+      }
+    }
+
+    if (!destination && state.destinationInput.trim()) {
+      dispatch({ type: 'SET_LOADING', payload: { isLoading: true, message: 'Locating destination...' } });
+      const places = await geocodePlace(state.destinationInput.trim());
+      if (places.length > 0) {
+        destination = places[0];
+        dispatch({ type: 'SET_DESTINATION_PLACE', payload: destination });
+      }
+    }
+
+    dispatch({ type: 'SET_LOADING', payload: { isLoading: false } });
+
+    if (!origin || !destination) {
+      dispatch({ type: 'SET_ERROR', payload: 'Please select valid origin and destination locations.' });
+      return;
+    }
+
+    onPlanRoute();
+  };
 
   return (
     <div className="glass-card p-4 space-y-4">
@@ -183,29 +239,33 @@ export function SearchPanel({ onPlanRoute, isLoading }: SearchPanelProps) {
       {/* Location inputs */}
       <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
         <div className="flex flex-col gap-2 flex-1">
-          <LocationInput
-            id="origin-input"
-            placeholder="From — enter origin location"
-            value={state.originInput}
-            onChange={(v) => dispatch({ type: 'SET_ORIGIN_INPUT', payload: v })}
-            onSelect={(p) => dispatch({ type: 'SET_ORIGIN_PLACE', payload: p })}
-            icon={<MapPin size={15} className="text-brand-400" />}
-            label="Origin location"
-          />
-          <LocationInput
-            id="destination-input"
-            placeholder="To — enter destination"
-            value={state.destinationInput}
-            onChange={(v) => dispatch({ type: 'SET_DESTINATION_INPUT', payload: v })}
-            onSelect={(p) => dispatch({ type: 'SET_DESTINATION_PLACE', payload: p })}
-            icon={<CornerDownLeft size={15} className="text-red-400" />}
-            label="Destination location"
-          />
+          <div className="relative z-30">
+            <LocationInput
+              id="origin-input"
+              placeholder="From — enter origin location"
+              value={state.originInput}
+              onChange={(v) => dispatch({ type: 'SET_ORIGIN_INPUT', payload: v })}
+              onSelect={(p) => dispatch({ type: 'SET_ORIGIN_PLACE', payload: p })}
+              icon={<MapPin size={15} className="text-brand-400" />}
+              label="Origin location"
+            />
+          </div>
+          <div className="relative z-20">
+            <LocationInput
+              id="destination-input"
+              placeholder="To — enter destination"
+              value={state.destinationInput}
+              onChange={(v) => dispatch({ type: 'SET_DESTINATION_INPUT', payload: v })}
+              onSelect={(p) => dispatch({ type: 'SET_DESTINATION_PLACE', payload: p })}
+              icon={<CornerDownLeft size={15} className="text-red-400" />}
+              label="Destination location"
+            />
+          </div>
         </div>
 
         {/* Plan button */}
         <button
-          onClick={onPlanRoute}
+          onClick={handlePlanClick}
           disabled={!canPlan}
           className={`btn-primary py-6 px-6 text-sm font-bold shrink-0 ${canPlan ? 'shadow-lg shadow-brand-600/30' : ''}`}
           aria-label="Plan route"

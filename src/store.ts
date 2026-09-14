@@ -73,7 +73,7 @@ const defaultPreferences: UserPreferences = {
     traffic: 0.05,
   },
   theme: 'dark',
-  mapStyle: 'default',
+  mapStyle: 'streets',
   showFloodLayer: true,
   showClosureLayer: true,
   showWeatherMarkers: true,

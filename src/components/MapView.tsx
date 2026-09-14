@@ -391,8 +391,9 @@ export function MapView() {
 
     if (style === 'streets') {
       // 100% Free OpenStreetMap Standard Tiles (No API key, No watermarks)
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        subdomains: ['a', 'b', 'c'],
         maxZoom: 19,
       }).addTo(tileGroupRef.current);
     } else if (style === 'satellite') {
@@ -402,7 +403,7 @@ export function MapView() {
         maxZoom: 19,
       }).addTo(tileGroupRef.current);
 
-      // 100% Free Esri Reference Boundaries & Transportation Labels (No CARTO, No API key, No watermarks)
+      // 100% Free Esri Reference Boundaries & Transportation Labels (No API key, No watermarks)
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Labels &copy; Esri',
         maxZoom: 19,
@@ -410,8 +411,9 @@ export function MapView() {
     } else {
       // 100% Free Dark Theme Navigation Tiles (No CARTO, No API key, No watermarks)
       // OpenStreetMap with high-contrast night styling class
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        subdomains: ['a', 'b', 'c'],
         maxZoom: 19,
         className: 'map-tiles-dark',
       }).addTo(tileGroupRef.current);

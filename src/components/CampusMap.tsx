@@ -37,8 +37,9 @@ export function CampusMap({ routeFrom, routeTo }: { routeFrom: string, routeTo: 
       attributionControl: true,
     });
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri',
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: ['a', 'b', 'c'],
       maxZoom: 19,
     }).addTo(map);
 
