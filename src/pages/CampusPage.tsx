@@ -6,6 +6,7 @@ import {
 import { useApp } from '../context';
 import { fetchBrainwareCampusData, fetchLiveWeather, askAiAgent, generateId } from '../services';
 import { CampusMap } from '../components/CampusMap';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import type { WeatherData } from '../types';
 
 const SUGGESTED_CAMPUS_PROMPTS = [
@@ -265,7 +266,12 @@ export function CampusPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Interactive Map */}
           <div className="h-[400px] md:h-[500px] rounded-xl overflow-hidden shadow-lg border border-white/10 relative">
-            <CampusMap routeFrom={routeFrom} routeTo={routeTo} />
+            <ErrorBoundary
+              fallbackTitle="Campus Map Display Error"
+              fallbackMessage="Unable to load the interactive campus map. Click below to reload."
+            >
+              <CampusMap routeFrom={routeFrom} routeTo={routeTo} />
+            </ErrorBoundary>
             <div className="absolute top-4 left-4 z-[400]">
               <div className="glass-card px-3 py-2 bg-surface-900/90 backdrop-blur-md shadow-lg border border-white/10">
                 <h3 className="text-xs font-bold text-white mb-1 flex items-center gap-1"><Info size={12} /> Map Legend</h3>

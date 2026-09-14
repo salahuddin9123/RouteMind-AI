@@ -248,11 +248,11 @@ export function MapView() {
     }
 
     // 2. Draw Origin & Destination Markers
-    if (originPlace) {
+    if (originPlace?.location && typeof originPlace.location.lat === 'number' && typeof originPlace.location.lng === 'number') {
       const markerA = new gmaps.Marker({
         position: { lat: originPlace.location.lat, lng: originPlace.location.lng },
         map: gMap,
-        title: `Origin: ${originPlace.name}`,
+        title: `Origin: ${originPlace.name || 'Origin'}`,
         label: { text: 'A', color: 'white', fontWeight: 'bold' },
         icon: {
           path: gmaps.SymbolPath.CIRCLE,
@@ -270,18 +270,18 @@ export function MapView() {
           payload: {
             lat: originPlace.location.lat,
             lng: originPlace.location.lng,
-            title: `Origin: ${originPlace.name}`
+            title: `Origin: ${originPlace.name || 'Origin'}`
           }
         });
       });
       googleOverlaysRef.current.markers.push(markerA);
     }
 
-    if (destinationPlace) {
+    if (destinationPlace?.location && typeof destinationPlace.location.lat === 'number' && typeof destinationPlace.location.lng === 'number') {
       const markerB = new gmaps.Marker({
         position: { lat: destinationPlace.location.lat, lng: destinationPlace.location.lng },
         map: gMap,
-        title: `Destination: ${destinationPlace.name}`,
+        title: `Destination: ${destinationPlace.name || 'Destination'}`,
         label: { text: 'B', color: 'white', fontWeight: 'bold' },
         icon: {
           path: gmaps.SymbolPath.CIRCLE,
@@ -299,7 +299,7 @@ export function MapView() {
           payload: {
             lat: destinationPlace.location.lat,
             lng: destinationPlace.location.lng,
-            title: `Destination: ${destinationPlace.name}`
+            title: `Destination: ${destinationPlace.name || 'Destination'}`
           }
         });
       });
@@ -307,8 +307,9 @@ export function MapView() {
     }
 
     // 3. Draw Flood Circles
-    if (state.showFloodLayer) {
+    if (state.showFloodLayer && Array.isArray(state.floodZones)) {
       state.floodZones.forEach((zone) => {
+        if (!zone?.center || typeof zone.center.lat !== 'number' || typeof zone.center.lng !== 'number') return;
         const color = getRiskCircleColor(zone.riskLevel);
         const circle = new gmaps.Circle({
           strokeColor: color,
@@ -318,19 +319,20 @@ export function MapView() {
           fillOpacity: 0.25,
           map: gMap,
           center: { lat: zone.center.lat, lng: zone.center.lng },
-          radius: zone.radius,
+          radius: zone.radius || 500,
         });
         googleOverlaysRef.current.circles.push(circle);
       });
     }
 
     // 4. Draw Road Closures
-    if (state.showClosureLayer) {
+    if (state.showClosureLayer && Array.isArray(state.roadClosures)) {
       state.roadClosures.forEach((closure) => {
+        if (!closure?.location || typeof closure.location.lat !== 'number' || typeof closure.location.lng !== 'number') return;
         const closureMarker = new gmaps.Marker({
           position: { lat: closure.location.lat, lng: closure.location.lng },
           map: gMap,
-          title: `🚧 ${closure.road}: ${closure.description}`,
+          title: `🚧 ${closure.road || 'Road'}: ${closure.description || 'Closed'}`,
           label: { text: '!', color: 'white', fontWeight: 'bold' },
           icon: {
             path: gmaps.SymbolPath.CIRCLE,
@@ -357,7 +359,13 @@ export function MapView() {
       return;
     }
 
-    if (!leafletContainerRef.current || leafletMapRef.current) return;
+    if (!leafletContainerRef.current) return;
+    if (leafletMapRef.current) return;
+
+    // Prevent 'Map container is already initialized' error in React
+    if ((leafletContainerRef.current as any)._leaflet_id) {
+      delete (leafletContainerRef.current as any)._leaflet_id;
+    }
 
     const map = L.map(leafletContainerRef.current, {
       center: [22.7335, 88.5529],
@@ -375,7 +383,20 @@ export function MapView() {
     leafletMapRef.current = map;
 
     return () => {
-      map.remove();
+      try {
+        if (leafletLayersRef.current) {
+          leafletLayersRef.current.routes.clearLayers();
+          leafletLayersRef.current.markers.clearLayers();
+          leafletLayersRef.current.flood.clearLayers();
+          leafletLayersRef.current.closures.clearLayers();
+        }
+        if (tileGroupRef.current) {
+          tileGroupRef.current.clearLayers();
+        }
+        map.remove();
+      } catch (err) {
+        console.warn('Leaflet map remove warning:', err);
+      }
       leafletMapRef.current = null;
     };
   }, [useGoogleMaps]);
@@ -426,19 +447,23 @@ export function MapView() {
     const map = leafletMapRef.current;
     if (!map) return;
 
-    leafletLayersRef.current.routes.clearLayers();
-    leafletLayersRef.current.markers.clearLayers();
+    if (leafletLayersRef.current?.routes) {
+      leafletLayersRef.current.routes.clearLayers();
+    }
+    if (leafletLayersRef.current?.markers) {
+      leafletLayersRef.current.markers.clearLayers();
+    }
 
     const { routeComparison, selectedRouteType, originPlace, destinationPlace } = state;
 
     if (!routeComparison) {
-      if (originPlace) {
+      if (originPlace?.location && typeof originPlace.location.lat === 'number') {
         const icon = createCustomIcon('#6366f1', 'A');
         L.marker([originPlace.location.lat, originPlace.location.lng], { icon })
           .bindPopup(`<div class="p-2"><strong class="text-white">${originPlace.name}</strong><br/><span class="text-gray-400 text-xs">Origin</span></div>`)
           .addTo(leafletLayersRef.current.markers);
       }
-      if (destinationPlace) {
+      if (destinationPlace?.location && typeof destinationPlace.location.lat === 'number') {
         const icon = createCustomIcon('#ef4444', 'B');
         L.marker([destinationPlace.location.lat, destinationPlace.location.lng], { icon })
           .bindPopup(`<div class="p-2"><strong class="text-white">${destinationPlace.name}</strong><br/><span class="text-gray-400 text-xs">Destination</span></div>`)
@@ -447,13 +472,16 @@ export function MapView() {
       return;
     }
 
-    const routes = routeComparison.all.filter((r) => r.coordinates && r.coordinates.length > 0);
+    const routes = Array.isArray(routeComparison.all)
+      ? routeComparison.all.filter((r) => Array.isArray(r.coordinates) && r.coordinates.length > 0)
+      : [];
 
     // Draw background routes
     routes.forEach((route) => {
       if (route.id === selectedRouteType || route.type === selectedRouteType) return;
+      if (!Array.isArray(route.coordinates) || route.coordinates.length === 0) return;
       L.polyline(route.coordinates, {
-        color: route.color,
+        color: route.color || '#3b82f6',
         weight: 4,
         opacity: 0.35,
         dashArray: '6 6',
@@ -462,14 +490,14 @@ export function MapView() {
 
     // Draw selected route
     const selectedRoute = routes.find((r) => r.id === selectedRouteType || r.type === selectedRouteType);
-    if (selectedRoute) {
-      if (selectedRoute.segments && selectedRoute.segments.some(s => s.coordinates && s.coordinates.length > 0)) {
+    if (selectedRoute && Array.isArray(selectedRoute.coordinates) && selectedRoute.coordinates.length > 0) {
+      if (Array.isArray(selectedRoute.segments) && selectedRoute.segments.some(s => s && Array.isArray(s.coordinates) && s.coordinates.length > 0)) {
         selectedRoute.segments.forEach(segment => {
-          if (!segment.coordinates || segment.coordinates.length === 0) return;
+          if (!segment || !Array.isArray(segment.coordinates) || segment.coordinates.length === 0) return;
           const color = segment.trafficLevel === 'critical' ? '#ef4444'
                       : segment.trafficLevel === 'high' ? '#f97316'
                       : segment.trafficLevel === 'moderate' ? '#eab308'
-                      : selectedRoute.color;
+                      : (selectedRoute.color || '#3b82f6');
 
           const poly = L.polyline(segment.coordinates, {
             color,
@@ -482,13 +510,13 @@ export function MapView() {
           poly.on('click', (e) => {
             dispatch({
               type: 'SET_STREET_VIEW_LOCATION',
-              payload: { lat: e.latlng.lat, lng: e.latlng.lng, title: `${segment.name} — Street View` }
+              payload: { lat: e.latlng.lat, lng: e.latlng.lng, title: `${segment.name || 'Segment'} — Street View` }
             });
           });
         });
       } else {
         const poly = L.polyline(selectedRoute.coordinates, {
-          color: selectedRoute.color,
+          color: selectedRoute.color || '#3b82f6',
           weight: 6,
           opacity: 1.0,
           lineCap: 'round',
@@ -504,12 +532,16 @@ export function MapView() {
       }
 
       if (selectedRoute.coordinates.length > 1) {
-        map.fitBounds(L.latLngBounds(selectedRoute.coordinates), { padding: [50, 50] });
+        try {
+          map.fitBounds(L.latLngBounds(selectedRoute.coordinates), { padding: [50, 50] });
+        } catch (e) {
+          console.warn('fitBounds error:', e);
+        }
       }
     }
 
     // Origin Marker
-    if (originPlace) {
+    if (originPlace?.location && typeof originPlace.location.lat === 'number') {
       const icon = createCustomIcon('#6366f1', 'A');
       const m = L.marker([originPlace.location.lat, originPlace.location.lng], { icon })
         .bindPopup(`
@@ -529,7 +561,7 @@ export function MapView() {
     }
 
     // Destination Marker
-    if (destinationPlace) {
+    if (destinationPlace?.location && typeof destinationPlace.location.lat === 'number') {
       const icon = createCustomIcon('#ef4444', 'B');
       const m = L.marker([destinationPlace.location.lat, destinationPlace.location.lng], { icon })
         .bindPopup(`
@@ -552,13 +584,16 @@ export function MapView() {
   // Leaflet Flood & Closure Overlays
   useEffect(() => {
     if (useGoogleMaps) return;
-    leafletLayersRef.current.flood.clearLayers();
-    if (!state.showFloodLayer) return;
+    if (leafletLayersRef.current?.flood) {
+      leafletLayersRef.current.flood.clearLayers();
+    }
+    if (!state.showFloodLayer || !Array.isArray(state.floodZones)) return;
 
     state.floodZones.forEach((zone) => {
+      if (!zone?.center || typeof zone.center.lat !== 'number' || typeof zone.center.lng !== 'number') return;
       const color = getRiskCircleColor(zone.riskLevel);
       L.circle([zone.center.lat, zone.center.lng], {
-        radius: zone.radius,
+        radius: zone.radius || 500,
         color,
         fillColor: color,
         fillOpacity: 0.22,
@@ -570,10 +605,13 @@ export function MapView() {
 
   useEffect(() => {
     if (useGoogleMaps) return;
-    leafletLayersRef.current.closures.clearLayers();
-    if (!state.showClosureLayer) return;
+    if (leafletLayersRef.current?.closures) {
+      leafletLayersRef.current.closures.clearLayers();
+    }
+    if (!state.showClosureLayer || !Array.isArray(state.roadClosures)) return;
 
     state.roadClosures.forEach((closure) => {
+      if (!closure?.location || typeof closure.location.lat !== 'number' || typeof closure.location.lng !== 'number') return;
       const icon = createHazardIcon('#ef4444', '🚧');
       L.marker([closure.location.lat, closure.location.lng], { icon }).addTo(leafletLayersRef.current.closures);
     });

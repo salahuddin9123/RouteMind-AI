@@ -181,9 +181,9 @@ export function appReducer(state: AppState, action: Action): AppState {
     case 'SET_RISK_WEIGHTS':
       return { ...state, riskWeights: action.payload };
     case 'SET_FLOOD_ZONES':
-      return { ...state, floodZones: action.payload };
+      return { ...state, floodZones: Array.isArray(action.payload) ? action.payload : [] };
     case 'SET_ROAD_CLOSURES':
-      return { ...state, roadClosures: action.payload };
+      return { ...state, roadClosures: Array.isArray(action.payload) ? action.payload : [] };
     case 'SET_WEATHER_DATA':
       return { ...state, weatherData: action.payload };
     case 'SET_SELECTED_ROAD':

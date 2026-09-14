@@ -299,8 +299,14 @@ export async function fetchLiveClosures(center: GeoLocation): Promise<RoadClosur
   try {
     const res = await fetch(`${API_BASE}/traffic?lat=${center.lat}&lon=${center.lng}`);
     if (!res.ok) return [];
-    return await res.json();
-  } catch {
+    const data = await res.json();
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.closures)) return data.closures;
+    if (Array.isArray(data?.data?.closures)) return data.data.closures;
+    if (Array.isArray(data?.incidents)) return data.incidents;
+    return [];
+  } catch (e) {
+    console.warn('fetchLiveClosures failed, falling back to empty list:', e);
     return [];
   }
 }
@@ -733,6 +739,15 @@ export async function calculateRoutes(
   const startTime = Date.now();
   console.info(`[RouteMind AI] Calculating routes for mode="${travelMode}", preference="${preference}"`);
 
+  if (!origin || typeof origin.lat !== 'number' || typeof origin.lng !== 'number' ||
+      !destination || typeof destination.lat !== 'number' || typeof destination.lng !== 'number') {
+    throw new Error('Invalid coordinates for origin or destination.');
+  }
+
+  if (Math.abs(origin.lat - destination.lat) < 0.00005 && Math.abs(origin.lng - destination.lng) < 0.00005) {
+    throw new Error('Origin and destination are at the same location. Please choose distinct points.');
+  }
+
   let rawRoutes: any[] = [];
   let backendUsed = '';
 
@@ -875,6 +890,10 @@ export async function calculateRoutes(
       aiScore: 0
     };
   });
+
+  if (!processedRoutes || processedRoutes.length === 0) {
+    throw new Error('No navigable route found between these locations. Please try adjusting your locations or travel mode.');
+  }
 
   let fastestCandidate: Route;
   let shortestCandidate: Route;

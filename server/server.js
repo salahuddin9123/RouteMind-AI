@@ -300,6 +300,7 @@ app.get('/api/traffic', async (req, res) => {
           status: 'ok',
           source: 'TomTom Traffic API',
           data: ttData,
+          closures: [],
           isDemo: false,
           lastUpdated: new Date().toISOString()
         });
@@ -315,7 +316,17 @@ app.get('/api/traffic', async (req, res) => {
     source: 'OpenStreetMap Road Infrastructure Flow Model',
     trafficCondition: 'NORMAL',
     congestionLevel: 'Light to moderate traffic',
+    closures: [],
     isDemo: false,
+    lastUpdated: new Date().toISOString()
+  });
+});
+
+// Live Road Closures Endpoint
+app.get('/api/closures', async (req, res) => {
+  res.json({
+    status: 'ok',
+    closures: [],
     lastUpdated: new Date().toISOString()
   });
 });

@@ -30,6 +30,10 @@ export function CampusMap({ routeFrom, routeTo }: { routeFrom: string, routeTo: 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    if ((containerRef.current as any)._leaflet_id) {
+      delete (containerRef.current as any)._leaflet_id;
+    }
+
     const map = L.map(containerRef.current, {
       center: [22.7335, 88.5529],
       zoom: 17,
@@ -50,7 +54,16 @@ export function CampusMap({ routeFrom, routeTo }: { routeFrom: string, routeTo: 
     mapRef.current = map;
 
     return () => {
-      map.remove();
+      try {
+        if (layersRef.current) {
+          layersRef.current.buildings.clearLayers();
+          layersRef.current.facilities.clearLayers();
+          layersRef.current.route.clearLayers();
+        }
+        map.remove();
+      } catch (err) {
+        console.warn('CampusMap remove warning:', err);
+      }
       mapRef.current = null;
     };
   }, []);

@@ -8,6 +8,7 @@ import { SearchPanel } from '../components/SearchPanel';
 import { RouteCards } from '../components/RouteCards';
 import { MapView } from '../components/MapView';
 import { MapControls } from '../components/MapControls';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { RiskWeightPanel } from '../components/RiskWeightPanel';
 import { WhatIfPanel } from '../components/WhatIfPanel';
 import { SaveRouteModal } from '../components/SaveRouteModal';
@@ -96,7 +97,7 @@ export function DashboardPage() {
             duration: recommended.duration,
             selectedRoute: 'recommended',
             preference: state.routePreference,
-            riskScore: recommended.riskBreakdown.overall,
+            riskScore: recommended.riskBreakdown?.overall ?? (100 - (recommended.safetyScore ?? 50)),
             travelMode: state.travelMode,
           },
         });
@@ -125,7 +126,14 @@ export function DashboardPage() {
           <SearchPanel onPlanRoute={handlePlanRoute} isLoading={isLoading} />
 
           {/* Route cards */}
-          {hasRoute && <RouteCards />}
+          {hasRoute && (
+            <ErrorBoundary
+              fallbackTitle="Route Details Error"
+              fallbackMessage="Unable to display route comparison cards. You can still interact with the map."
+            >
+              <RouteCards />
+            </ErrorBoundary>
+          )}
 
           {/* Risk weights */}
           {hasRoute && (
@@ -211,7 +219,12 @@ export function DashboardPage() {
 
       {/* Map */}
       <div className="flex-1 relative overflow-hidden">
-        <MapView />
+        <ErrorBoundary
+          fallbackTitle="Map Route Display Error"
+          fallbackMessage="An unexpected issue occurred while displaying the route on the map. Click below to reload the map."
+        >
+          <MapView />
+        </ErrorBoundary>
         <MapControls />
 
         {/* Road info panel overlay */}

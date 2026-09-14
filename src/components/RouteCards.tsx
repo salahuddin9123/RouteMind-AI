@@ -59,7 +59,12 @@ export function RouteCard({ route, isSelected, onSelect }: RouteCardProps) {
     },
   };
 
-  const cfg = typeConfig[route.type];
+  const cfg = typeConfig[route.type] || {
+    label: route.label || 'Route',
+    color: route.color || '#3b82f6',
+    icon: <Navigation size={13} />,
+    badge: undefined,
+  };
   const borderColor =
     route.type === 'shortest' ? 'border-emerald-500/40' :
     route.type === 'fastest' ? 'border-blue-500/40' :
@@ -108,16 +113,16 @@ export function RouteCard({ route, isSelected, onSelect }: RouteCardProps) {
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Distance</p>
-          <p className="text-lg font-bold text-white leading-none">{formatDistance(route.distance)}</p>
+          <p className="text-lg font-bold text-white leading-none">{formatDistance(route.distance ?? 0)}</p>
         </div>
         <div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Est. Time</p>
-          <p className="text-lg font-bold text-white leading-none">{formatDuration(route.duration)}</p>
+          <p className="text-lg font-bold text-white leading-none">{formatDuration(route.duration ?? 0)}</p>
         </div>
         {route.type === 'shortest' && (
           <div>
             <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Turns</p>
-            <p className="text-sm font-semibold text-white">{route.turns}</p>
+            <p className="text-sm font-semibold text-white">{route.turns ?? 0}</p>
           </div>
         )}
         {route.type === 'fastest' && route.trafficStatus && (
@@ -134,33 +139,36 @@ export function RouteCard({ route, isSelected, onSelect }: RouteCardProps) {
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Safety Score</span>
           <span className="text-[10px] text-gray-500">App Estimate</span>
         </div>
-        <SafetyBar score={route.safetyScore} />
+        <SafetyBar score={route.safetyScore ?? 50} />
       </div>
 
       {/* Risk pills for safest/recommended */}
-      {(route.type === 'safest' || route.type === 'recommended') && (
+      {(route.type === 'safest' || route.type === 'recommended') && route.riskBreakdown && (
         <div className="flex flex-wrap gap-1 mt-2">
-          <RiskPill label="Flood" score={route.riskBreakdown.flood} />
-          <RiskPill label="Closure" score={route.riskBreakdown.closure} />
+          <RiskPill label="Flood" score={route.riskBreakdown.flood ?? 0} />
+          <RiskPill label="Closure" score={route.riskBreakdown.closure ?? 0} />
           {route.type === 'recommended' && (
-            <RiskPill label="Weather" score={route.riskBreakdown.weather} />
+            <RiskPill label="Weather" score={route.riskBreakdown.weather ?? 0} />
           )}
         </div>
       )}
 
       {/* 360 Street View Quick Action */}
-      {isSelected && route.coordinates && route.coordinates.length > 0 && (
+      {isSelected && Array.isArray(route.coordinates) && route.coordinates.length > 0 && (
         <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
           <span className="text-[10px] text-gray-400">Street View 360° Panorama</span>
           <span
             onClick={(e) => {
               e.stopPropagation();
               const midIdx = Math.floor(route.coordinates.length / 2);
-              const [lat, lng] = route.coordinates[midIdx] || route.coordinates[0];
-              dispatch({
-                type: 'SET_STREET_VIEW_LOCATION',
-                payload: { lat, lng, title: `${route.label} — Street View` }
-              });
+              const point = route.coordinates[midIdx] || route.coordinates[0];
+              if (point && point.length >= 2) {
+                const [lat, lng] = point;
+                dispatch({
+                  type: 'SET_STREET_VIEW_LOCATION',
+                  payload: { lat, lng, title: `${route.label || 'Route'} — Street View` }
+                });
+              }
             }}
             className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 cursor-pointer bg-brand-500/10 hover:bg-brand-500/20 px-2 py-1 rounded-md border border-brand-500/30 transition-colors"
           >

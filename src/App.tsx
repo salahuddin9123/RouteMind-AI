@@ -15,6 +15,8 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CampusPage } from './pages/CampusPage';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 function AppContent() {
   const { state } = useApp();
 
@@ -41,7 +43,9 @@ function AppContent() {
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
         <main className="flex-1 relative overflow-y-auto scroll-area">
-          {renderPage()}
+          <ErrorBoundary>
+            {renderPage()}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

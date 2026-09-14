@@ -4,6 +4,7 @@ import { useApp } from '../context';
 import { MapView } from '../components/MapView';
 import { MapControls } from '../components/MapControls';
 import { NavigationOverlay } from '../components/NavigationOverlay';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export function LiveMapPage() {
   const { state } = useApp();
@@ -21,7 +22,12 @@ export function LiveMapPage() {
 
       {/* Full map */}
       <div className="flex-1 relative overflow-hidden">
-        <MapView />
+        <ErrorBoundary
+          fallbackTitle="Live Map Display Error"
+          fallbackMessage="Unable to load the interactive live map layers. Click below to reload."
+        >
+          <MapView />
+        </ErrorBoundary>
         {!state.navigationMode && <MapControls />}
         {state.navigationMode && <NavigationOverlay />}
       </div>
