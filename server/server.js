@@ -439,9 +439,43 @@ app.post('/api/ai/chat', async (req, res) => {
       }
     }
 
+    // E2. Check Campus Building Questions
+    else if (userLower.includes('building') || userLower.includes('bhavan') || userLower.includes('satyajit') || userLower.includes('vidyasagar') || userLower.includes('prafulla') || userLower.includes('jagadish') || userLower.includes('rabindra') || userLower.includes('rammohan') || userLower.includes('aurobindo') || userLower.includes('satyendra')) {
+      const buildings = campus?.buildings || [
+        { id: 'I', number: 1, romanNumber: 'I', name: 'Building I: Satyajit Bhavan', bhavanName: 'Satyajit Bhavan', nearestGate: 'Gate 1 (Main Gate)' },
+        { id: 'II', number: 2, romanNumber: 'II', name: 'Building II: Vidyasagar Bhavan', bhavanName: 'Vidyasagar Bhavan', nearestGate: 'Gate 2 (Back Gate)' },
+        { id: 'III', number: 3, romanNumber: 'III', name: 'Building III: Prafulla Bhavan', bhavanName: 'Prafulla Bhavan', nearestGate: 'Gate 2 (Back Gate)' },
+        { id: 'IV', number: 4, romanNumber: 'IV', name: 'Building IV: Jagadish Bhavan', bhavanName: 'Jagadish Bhavan', nearestGate: 'Gate 1 (Main Gate)' },
+        { id: 'V', number: 5, romanNumber: 'V', name: 'Building V: Rabindra Bhavan', bhavanName: 'Rabindra Bhavan', nearestGate: 'Gate 1 (Main Gate)' },
+        { id: 'VI', number: 6, romanNumber: 'VI', name: 'Building VI: Rammohan Bhavan', bhavanName: 'Rammohan Bhavan', nearestGate: 'Gate 2 (Back Gate)' },
+        { id: 'VII', number: 7, romanNumber: 'VII', name: 'Building VII: Aurobindo Bhavan', bhavanName: 'Aurobindo Bhavan', nearestGate: 'Gate 2 (Back Gate)' },
+        { id: 'VIII', number: 8, romanNumber: 'VIII', name: 'Building VIII: Satyendra Bhavan', bhavanName: 'Satyendra Bhavan', nearestGate: 'Gate 1 (Main Gate)' }
+      ];
+
+      const found = buildings.find(b =>
+        userLower.includes(`building ${b.romanNumber.toLowerCase()}`) ||
+        userLower.includes(`building ${b.number}`) ||
+        (b.bhavanName && userLower.includes(b.bhavanName.toLowerCase()))
+      );
+
+      if (found) {
+        reply = `🏛️ **${found.fullName || found.name}**:\n• Identification: Building ${found.romanNumber} (No. ${found.number})\n• Nearest Gate: ${found.nearestGate || 'Gate 1 / Gate 2'}\n• Pedestrian pathways are clear and navigable via the Campus Map.`;
+      } else {
+        reply = `🏛️ **Brainware University Campus Buildings (I–VIII):**\n` +
+          `• Building I: Satyajit Bhavan (near Gate 1)\n` +
+          `• Building II: Vidyasagar Bhavan (near Gate 2)\n` +
+          `• Building III: Prafulla Bhavan (near Gate 2)\n` +
+          `• Building IV: Jagadish Bhavan (near Gate 1)\n` +
+          `• Building V: Rabindra Bhavan (near Gate 1)\n` +
+          `• Building VI: Rammohan Bhavan (near Gate 2)\n` +
+          `• Building VII: Aurobindo Bhavan (near Gate 2)\n` +
+          `• Building VIII: Satyendra Bhavan (near Gate 1)`;
+      }
+    }
+
     // F. Fallback for unverified questions
     else {
-      reply = `I don't have verified data on that yet. Current verified campus data covers Gate 1, Gate 2, Main Canteen, Food Court, building navigation, and live weather/flood monitoring.`;
+      reply = `I don't have verified data on that yet. Current verified campus data covers Gate 1, Gate 2, Main Canteen, Food Court, Buildings I–VIII navigation, and live weather/flood monitoring.`;
     }
 
     res.json({ reply, isOfflineEngine: true });

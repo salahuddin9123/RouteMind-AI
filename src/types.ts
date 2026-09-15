@@ -243,7 +243,12 @@ export interface CampusFacility {
 
 export interface CampusBuilding {
   id: string;
+  number: number;
+  romanNumber: string;
   name: string;
+  bhavanName: string;
+  fullName: string;
+  nearestGate: string;
   location: GeoLocation;
   occupancy: number | null;
   crowdLevel: CrowdLevel;

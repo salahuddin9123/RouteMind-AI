@@ -475,16 +475,14 @@ export async function fetchBrainwareCampusData(): Promise<import('./types').Camp
 
   return {
     buildings: [
-      { id: 'b1', name: 'Building 1: Satyajit Bhavan', location: { lat: 22.7338, lng: 88.5532 }, occupancy: 65, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b2', name: 'Building 2: Vidyasagar Bhavan', location: { lat: 22.7336, lng: 88.5528 }, occupancy: 50, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b3', name: 'Building 3: Rabindra Bhavan', location: { lat: 22.7334, lng: 88.5531 }, occupancy: 40, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b4', name: 'Building 4: Netaji Bhavan', location: { lat: 22.7335, lng: 88.5535 }, occupancy: 70, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b5', name: 'Building 5: Vivekananda Bhavan', location: { lat: 22.7332, lng: 88.5536 }, occupancy: 45, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b6', name: 'Building 6: Jagadish Chandra Bhavan', location: { lat: 22.7331, lng: 88.5530 }, occupancy: 55, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b7', name: 'Building 7: C.V. Raman Bhavan', location: { lat: 22.7339, lng: 88.5526 }, occupancy: 35, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b8', name: 'Building 8: Mother Teresa Bhavan', location: { lat: 22.7341, lng: 88.5530 }, occupancy: 60, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b9', name: 'Building 9: APJ Abdul Kalam Bhavan', location: { lat: 22.7329, lng: 88.5532 }, occupancy: 40, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
-      { id: 'b10', name: 'Building 10: Amartya Sen Bhavan', location: { lat: 22.7337, lng: 88.5538 }, occupancy: 48, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'I', number: 1, romanNumber: 'I', name: 'Building I: Satyajit Bhavan', bhavanName: 'Satyajit Bhavan', fullName: 'Building I: Satyajit Bhavan', nearestGate: 'Gate 1 (Main Gate)', location: { lat: 22.7338, lng: 88.5532 }, occupancy: 65, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'II', number: 2, romanNumber: 'II', name: 'Building II: Vidyasagar Bhavan', bhavanName: 'Vidyasagar Bhavan', fullName: 'Building II: Vidyasagar Bhavan', nearestGate: 'Gate 2 (Back Gate)', location: { lat: 22.7336, lng: 88.5528 }, occupancy: 50, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'III', number: 3, romanNumber: 'III', name: 'Building III: Prafulla Bhavan', bhavanName: 'Prafulla Bhavan', fullName: 'Building III: Prafulla Bhavan', nearestGate: 'Gate 2 (Back Gate)', location: { lat: 22.7334, lng: 88.5531 }, occupancy: 40, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'IV', number: 4, romanNumber: 'IV', name: 'Building IV: Jagadish Bhavan', bhavanName: 'Jagadish Bhavan', fullName: 'Building IV: Jagadish Bhavan', nearestGate: 'Gate 1 (Main Gate)', location: { lat: 22.7335, lng: 88.5535 }, occupancy: 70, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'V', number: 5, romanNumber: 'V', name: 'Building V: Rabindra Bhavan', bhavanName: 'Rabindra Bhavan', fullName: 'Building V: Rabindra Bhavan', nearestGate: 'Gate 1 (Main Gate)', location: { lat: 22.7332, lng: 88.5536 }, occupancy: 45, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'VI', number: 6, romanNumber: 'VI', name: 'Building VI: Rammohan Bhavan', bhavanName: 'Rammohan Bhavan', fullName: 'Building VI: Rammohan Bhavan', nearestGate: 'Gate 2 (Back Gate)', location: { lat: 22.7331, lng: 88.5530 }, occupancy: 55, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'VII', number: 7, romanNumber: 'VII', name: 'Building VII: Aurobindo Bhavan', bhavanName: 'Aurobindo Bhavan', fullName: 'Building VII: Aurobindo Bhavan', nearestGate: 'Gate 2 (Back Gate)', location: { lat: 22.7339, lng: 88.5526 }, occupancy: 35, crowdLevel: 'LOW', waterloggingStatus: 'Clear', lastUpdated },
+      { id: 'VIII', number: 8, romanNumber: 'VIII', name: 'Building VIII: Satyendra Bhavan', bhavanName: 'Satyendra Bhavan', fullName: 'Building VIII: Satyendra Bhavan', nearestGate: 'Gate 1 (Main Gate)', location: { lat: 22.7341, lng: 88.5530 }, occupancy: 60, crowdLevel: 'MODERATE', waterloggingStatus: 'Clear', lastUpdated },
     ],
     facilities: [
       {
@@ -1160,4 +1158,27 @@ export function computeAnalytics(
   const highRiskRoadsAvoided = Math.floor(optimizedTrips * 1.8);
   const avgRiskScore = Math.round(history.reduce((a, h) => a + (h.riskScore || 50), 0) / totalTrips);
   return { totalTrips, totalDistanceSaved, totalTimeSaved, highRiskRoadsAvoided, optimizedTrips, avgRiskScore };
+}
+
+/**
+ * Normalizes and matches campus buildings by Roman numeral (e.g. 'I', 'III'),
+ * integer number (e.g. 1, 3), full display name, or Bhavan name.
+ */
+export function matchCampusBuilding(query: string | number, buildings?: import('./types').CampusBuilding[]): import('./types').CampusBuilding | undefined {
+  if (!query) return undefined;
+  const q = String(query).trim().toLowerCase();
+  const cleaned = q.replace(/^building\s*/i, '').trim();
+
+  const list = buildings || [];
+  return list.find(b => 
+    b.id.toLowerCase() === q ||
+    b.id.toLowerCase() === cleaned ||
+    String(b.number) === q ||
+    String(b.number) === cleaned ||
+    b.romanNumber.toLowerCase() === q ||
+    b.romanNumber.toLowerCase() === cleaned ||
+    b.name.toLowerCase().includes(q) ||
+    b.bhavanName.toLowerCase().includes(q) ||
+    b.fullName.toLowerCase().includes(q)
+  );
 }
